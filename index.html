@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>FilamentHub — Inventaire 3D</title>
+  <title>FilamentHub — Inventaire Cloud</title>
   
   <!-- Optimisation iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,10 +20,7 @@
       theme: {
         extend: {
           colors: {
-            brand: {
-              500: '#10b981',
-              600: '#059669',
-            }
+            brand: { 500: '#10b981', 600: '#059669' }
           }
         }
       }
@@ -41,17 +38,19 @@
         </div>
         <div>
           <h1 class="text-base font-bold leading-tight">FilamentHub</h1>
-          <span class="text-xs text-zinc-400 font-mono">1.75 mm • Atelier</span>
+          <div class="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
+            <span>1.75 mm</span>
+            <span>•</span>
+            <span id="syncStatus" class="inline-flex items-center gap-1 text-emerald-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Synchronisé
+            </span>
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="exportData()" class="p-2 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition" title="Exporter la sauvegarde">
+        <button onclick="exportData()" class="p-2 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition" title="Télécharger une sauvegarde">
           <i data-lucide="download" class="w-4 h-4"></i>
         </button>
-        <button onclick="triggerImport()" class="p-2 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition" title="Importer">
-          <i data-lucide="upload" class="w-4 h-4"></i>
-        </button>
-        <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importData(event)">
         <button onclick="openModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium text-xs shadow-lg shadow-emerald-950 transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
           <span>Ajouter</span>
@@ -93,16 +92,14 @@
     </div>
 
     <!-- Grille des bobines -->
-    <div id="spoolsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <!-- Les cartes s'affichent ici -->
-    </div>
+    <div id="spoolsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
 
     <!-- État vide -->
     <div id="emptyState" class="hidden text-center py-12 space-y-3">
       <div class="w-12 h-12 mx-auto rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500">
         <i data-lucide="box" class="w-6 h-6"></i>
       </div>
-      <p class="text-zinc-400 text-sm">Aucune bobine trouvée.</p>
+      <p class="text-zinc-400 text-sm">Aucune bobine dans l'inventaire.</p>
     </div>
   </main>
 
@@ -184,46 +181,71 @@
         </div>
 
         <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium text-sm transition shadow-lg shadow-emerald-950">
-          Enregistrer la bobine
+          Enregistrer
         </button>
       </form>
     </div>
   </div>
 
-  <script>
-    const STORAGE_KEY = 'filament_hub_spools_v1';
+  <!-- Intégration Firebase Realtime Database -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set, remove, update } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmkcy-NSMwZtsBIS3YdGTN6LZdaWdh8eo",
+      authDomain: "inventaire-filament.firebaseapp.com",
+      databaseURL: "https://inventaire-filament-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "inventaire-filament",
+      storageBucket: "inventaire-filament.firebasestorage.app",
+      messagingSenderId: "252433237067",
+      appId: "1:252433237067:web:34d10e82f1022cd81d39ce",
+      measurementId: "G-TVCM5TCH6Q"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const spoolsRef = ref(db, 'spools');
+
     let spools = [];
     let currentFilter = 'ALL';
 
-    function init() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try { spools = JSON.parse(saved); } catch (e) { spools = []; }
+    // Écoute en temps réel
+    onValue(spoolsRef, (snapshot) => {
+      const data = snapshot.val();
+      spools = [];
+      if (data) {
+        Object.keys(data).forEach(key => {
+          spools.push({ id: key, ...data[key] });
+        });
       }
+      spools.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
       renderSpools();
-      lucide.createIcons();
-    }
+      document.getElementById('syncStatus').innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Synchronisé
+      `;
+    }, (error) => {
+      console.error(error);
+      document.getElementById('syncStatus').innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Erreur Cloud
+      `;
+    });
 
-    function saveToStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(spools));
-      renderSpools();
-    }
-
-    function selectBrand(name) {
+    window.selectBrand = (name) => {
       document.getElementById('brandInput').value = name;
-    }
+    };
 
-    function updatePercentDisplays(val) {
+    window.updatePercentDisplays = (val) => {
       document.getElementById('percentDisplay').innerText = val;
       document.getElementById('gramDisplay').innerText = Math.round((val / 100) * 1000);
-    }
+    };
 
-    function setPercentQuick(val) {
+    window.setPercentQuick = (val) => {
       document.getElementById('percentRange').value = val;
-      updatePercentDisplays(val);
-    }
+      window.updatePercentDisplays(val);
+    };
 
-    function openModal(editId = null) {
+    window.openModal = (editId = null) => {
       const form = document.getElementById('spoolForm');
       form.reset();
       if (editId) {
@@ -236,24 +258,24 @@
         document.getElementById('colorHexInput').value = item.colorHex || '#ffffff';
         document.getElementById('notesInput').value = item.notes || '';
         document.getElementById('percentRange').value = item.percent;
-        updatePercentDisplays(item.percent);
+        window.updatePercentDisplays(item.percent);
         const radio = form.querySelector(`input[name="material"][value="${item.material}"]`);
         if (radio) radio.checked = true;
       } else {
         document.getElementById('modalTitle').innerText = 'Ajouter une bobine';
         document.getElementById('spoolId').value = '';
-        setPercentQuick(100);
+        window.setPercentQuick(100);
       }
       document.getElementById('spoolModal').classList.remove('hidden');
-    }
+    };
 
-    function closeModal() {
+    window.closeModal = () => {
       document.getElementById('spoolModal').classList.add('hidden');
-    }
+    };
 
-    function saveSpool(e) {
+    window.saveSpool = async (e) => {
       e.preventDefault();
-      const id = document.getElementById('spoolId').value;
+      const id = document.getElementById('spoolId').value || ('spool_' + Date.now());
       const brand = document.getElementById('brandInput').value.trim();
       const material = document.querySelector('input[name="material"]:checked').value;
       const colorName = document.getElementById('colorNameInput').value.trim();
@@ -261,68 +283,59 @@
       const percent = parseInt(document.getElementById('percentRange').value, 10);
       const notes = document.getElementById('notesInput').value.trim();
 
-      if (id) {
-        const idx = spools.findIndex(s => s.id === id);
-        if (idx !== -1) {
-          spools[idx] = { ...spools[idx], brand, material, colorName, colorHex, percent, notes, updatedAt: Date.now() };
-        }
-      } else {
-        spools.unshift({
-          id: 'spool_' + Date.now(),
-          brand,
-          material,
-          colorName,
-          colorHex,
-          percent,
-          notes,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        });
-      }
+      const spoolData = {
+        brand,
+        material,
+        colorName,
+        colorHex,
+        percent,
+        notes,
+        updatedAt: Date.now()
+      };
 
-      saveToStorage();
-      closeModal();
-    }
+      await set(ref(db, `spools/${id}`), spoolData);
+      window.closeModal();
+    };
 
-    function adjustPercent(id, delta) {
+    window.adjustPercent = async (id, delta) => {
       const item = spools.find(s => s.id === id);
       if (!item) return;
-      item.percent = Math.min(100, Math.max(0, item.percent + delta));
-      item.updatedAt = Date.now();
-      saveToStorage();
-    }
+      const newPercent = Math.min(100, Math.max(0, item.percent + delta));
+      await update(ref(db, `spools/${id}`), {
+        percent: newPercent,
+        updatedAt: Date.now()
+      });
+    };
 
-    function deleteSpool(id) {
-      if (confirm('Supprimer cette bobine de l’inventaire ?')) {
-        spools = spools.filter(s => s.id !== id);
-        saveToStorage();
+    window.deleteSpool = async (id) => {
+      if (confirm('Supprimer cette bobine ?')) {
+        await remove(ref(db, `spools/${id}`));
       }
-    }
+    };
 
-    function setMaterialFilter(mat) {
+    window.setMaterialFilter = (mat) => {
       currentFilter = mat;
       document.querySelectorAll('#materialFilters button').forEach(b => {
         b.className = 'filter-btn px-3 py-1 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-zinc-200';
       });
       event.target.className = 'filter-btn active px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium';
       renderSpools();
-    }
+    };
 
-    function renderSpools() {
+    window.renderSpools = () => {
       const query = document.getElementById('searchInput').value.toLowerCase();
       const grid = document.getElementById('spoolsGrid');
       const empty = document.getElementById('emptyState');
 
       const filtered = spools.filter(s => {
         const matchFilter = currentFilter === 'ALL' || s.material === currentFilter;
-        const matchSearch = s.brand.toLowerCase().includes(query) || 
-                            s.colorName.toLowerCase().includes(query) || 
-                            s.material.toLowerCase().includes(query) ||
+        const matchSearch = (s.brand || '').toLowerCase().includes(query) || 
+                            (s.colorName || '').toLowerCase().includes(query) || 
+                            (s.material || '').toLowerCase().includes(query) ||
                             (s.notes && s.notes.toLowerCase().includes(query));
         return matchFilter && matchSearch;
       });
 
-      // Statistiques
       const totalWeight = spools.reduce((acc, s) => acc + (s.percent * 10), 0);
       document.getElementById('statTotalSpools').innerText = spools.length;
       document.getElementById('statTotalWeight').innerText = (totalWeight / 1000).toFixed(2) + ' kg';
@@ -360,7 +373,6 @@
               </div>
             </div>
 
-            <!-- Jauge % -->
             <div class="space-y-1">
               <div class="flex justify-between text-xs font-mono">
                 <span class="text-zinc-400">Reste: <strong class="text-zinc-200">${s.percent}%</strong> (~${grams}g)</span>
@@ -371,7 +383,6 @@
               </div>
             </div>
 
-            <!-- Actions rapides -->
             <div class="flex items-center justify-between pt-1 border-t border-zinc-800/50">
               <span class="text-[11px] text-zinc-500 truncate max-w-[150px]">${s.notes || 'Aucune note'}</span>
               <div class="flex items-center gap-1">
@@ -384,9 +395,9 @@
       }).join('');
 
       lucide.createIcons();
-    }
+    };
 
-    function exportData() {
+    window.exportData = () => {
       const blob = new Blob([JSON.stringify(spools, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -394,32 +405,9 @@
       a.download = `inventaire_filaments_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-    }
+    };
 
-    function triggerImport() {
-      document.getElementById('importFileInput').click();
-    }
-
-    function importData(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          if (Array.isArray(parsed)) {
-            spools = parsed;
-            saveToStorage();
-            alert('Inventaire importé avec succès !');
-          }
-        } catch (err) {
-          alert('Fichier JSON invalide.');
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    window.onload = init;
+    lucide.createIcons();
   </script>
 </body>
 </html>
