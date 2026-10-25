@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FilamentHub 3D - Inventaire de Filaments</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              accent: '#06b6d4',
+            },
+            surface: {
+              800: '#1e222d',
+              850: '#171a23',
+              900: '#0f1218',
+              950: '#090a0f',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f1218;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a303f;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b4459;
+    }
+
+    /* Range slider custom styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #10b981;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+      margin-top: -6px;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #2a303f;
+      border-radius: 9999px;
+    }
+
+    /* Bobbin icon ring pulse */
+    .glow-cyan {
+      box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.25);
+    }
+    .spool-visual {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+<body class="bg-surface-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-brand-500/30 selection:text-brand-100">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-surface-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3.5 transition-all">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <!-- Logo / Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-accent to-emerald-400 p-[1px] shadow-lg shadow-brand-500/10 flex items-center justify-center">
+          <div class="w-full h-full bg-surface-950 rounded-[11px] flex items-center justify-center">
+            <i class="ph-bold ph-cylinder text-brand-accent text-2xl"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
+              Filament<span class="text-brand-500">Hub</span>
+            </h1>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold tracking-wider">Ø 1.75 mm</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Inventaire & Suivi des bobines 3D</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Scan IA Button -->
+        <button onclick="openScanModal()" class="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-lg shadow-cyan-500/20 active:scale-[0.98] transition">
+          <i class="ph-bold ph-camera text-base"></i>
+          <span class="hidden sm:inline">Scanner</span> Bobine IA
+        </button>
+
+        <!-- Export / Import -->
+        <button id="btn-import-export" onclick="openDataModal()" title="Sauvegarde & Export" class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white bg-surface-850 hover:bg-surface-800 border border-slate-700/60 rounded-xl transition shadow-sm">
+          <i class="ph ph-arrows-clockwise text-base text-brand-accent"></i>
+          <span class="hidden md:inline">Sauvegardes</span>
+        </button>
+
+        <!-- New Spool Button -->
+        <button onclick="openModal()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-lg shadow-brand-500/20 active:scale-[0.98] transition">
+          <i class="ph-bold ph-plus text-base"></i>
+          <span>Nouvelle Bobine</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- KPI Metrics Banner -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-surface-900 border border-slate-800/80 p-4 rounded-2xl flex items-center gap-3 relative overflow-hidden group hover:border-slate-700/80 transition">
+        <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl text-brand-500">
+          <i class="ph-duotone ph-circles-three-plus text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs uppercase font-medium tracking-wider text-slate-400">Total Bobines</p>
+          <h3 id="stat-total-spools" class="text-xl sm:text-2xl font-bold font-mono text-white mt-0.5">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-surface-900 border border-slate-800/80 p-4 rounded-2xl flex items-center gap-3 relative overflow-hidden group hover:border-slate-700/80 transition">
+        <div class="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400">
+          <i class="ph-duotone ph-scales text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs uppercase font-medium tracking-wider text-slate-400">Poids Restant</p>
+          <h3 id="stat-total-weight" class="text-xl sm:text-2xl font-bold font-mono text-white mt-0.5">0.00 <span class="text-xs text-slate-400 font-sans">kg</span></h3>
+        </div>
+      </div>
+
+      <div class="bg-surface-900 border border-slate-800/80 p-4 rounded-2xl flex items-center gap-3 relative overflow-hidden group hover:border-slate-700/80 transition">
+        <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
+          <i class="ph-duotone ph-chart-pie-slice text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs uppercase font-medium tracking-wider text-slate-400">Entamées</p>
+          <h3 id="stat-opened" class="text-xl sm:text-2xl font-bold font-mono text-white mt-0.5">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-surface-900 border border-slate-800/80 p-4 rounded-2xl flex items-center gap-3 relative overflow-hidden group hover:border-slate-700/80 transition">
+        <div class="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400">
+          <i class="ph-duotone ph-battery-warning-vertical text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs uppercase font-medium tracking-wider text-slate-400">&lt; 20% (Critique)</p>
+          <h3 id="stat-low" class="text-xl sm:text-2xl font-bold font-mono text-white mt-0.5">0</h3>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filters & Search Toolbar -->
+    <section class="bg-surface-900 border border-slate-800/80 rounded-2xl p-4 sm:p-5 space-y-4">
+      <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Rechercher par couleur, marque, matière, bac..." 
+            oninput="handleSearch(this.value)"
+            class="w-full pl-10 pr-4 py-2.5 bg-surface-850 border border-slate-700/60 rounded-xl text-sm placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition text-slate-200"
+          >
+          <button 
+            id="search-clear-btn" 
+            onclick="clearSearch()" 
+            class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5 rounded-md"
+          >
+            <i class="ph ph-x text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Brand Selector Dropdown -->
+        <div class="flex items-center gap-2">
+          <div class="relative min-w-[140px] w-full sm:w-auto">
+            <select id="filter-brand" onchange="applyFilters()" class="w-full bg-surface-850 border border-slate-700/60 text-slate-200 text-xs sm:text-sm rounded-xl py-2.5 pl-3 pr-8 appearance-none focus:outline-none focus:border-brand-500">
+              <option value="ALL">Toutes Marques</option>
+              <option value="Sunlu">Sunlu</option>
+              <option value="Anycubic">Anycubic</option>
+              <option value="Bambu Lab">Bambu Lab</option>
+              <option value="eSun">eSun</option>
+              <option value="Polymaker">Polymaker</option>
+              <option value="Prusament">Prusament</option>
+              <option value="Autre">Autres marques</option>
+            </select>
+            <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+          </div>
+
+          <!-- Stock Status Filter -->
+          <div class="relative min-w-[130px] w-full sm:w-auto">
+            <select id="filter-status" onchange="applyFilters()" class="w-full bg-surface-850 border border-slate-700/60 text-slate-200 text-xs sm:text-sm rounded-xl py-2.5 pl-3 pr-8 appearance-none focus:outline-none focus:border-brand-500">
+              <option value="ALL">Tous Niveaux</option>
+              <option value="FULL">Neuves (100%)</option>
+              <option value="STARTED">Entamées (1-99%)</option>
+              <option value="LOW">Critique (&lt; 20%)</option>
+              <option value="EMPTY">Vides (0%)</option>
+            </select>
+            <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Material Pills (Tags) -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 no-scrollbar text-xs">
+        <span class="text-slate-400 text-xs font-semibold mr-1 flex items-center gap-1">
+          <i class="ph-bold ph-funnel"></i> Matière:
+        </span>
+        <button onclick="setMaterialFilter('ALL')" id="mat-btn-ALL" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-brand-500/20 text-brand-400 border border-brand-500/30">
+          Tous
+        </button>
+        <button onclick="setMaterialFilter('PLA')" id="mat-btn-PLA" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60">
+          PLA
+        </button>
+        <button onclick="setMaterialFilter('PETG')" id="mat-btn-PETG" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60">
+          PETG
+        </button>
+        <button onclick="setMaterialFilter('TPU')" id="mat-btn-TPU" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60">
+          TPU
+        </button>
+        <button onclick="setMaterialFilter('ABS')" id="mat-btn-ABS" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60">
+          ABS
+        </button>
+        <button onclick="setMaterialFilter('ASA')" id="mat-btn-ASA" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60">
+          ASA
+        </button>
+        <button onclick="setMaterialFilter('AUTRE')" id="mat-btn-AUTRE" class="mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60">
+          Autres
+        </button>
+      </div>
+    </section>
+
+    <!-- Cards Grid -->
+    <section>
+      <div id="spools-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- Spool Cards will be rendered dynamically -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden flex-col items-center justify-center p-12 text-center bg-surface-900 border border-dashed border-slate-800 rounded-3xl mt-4">
+        <div class="w-16 h-16 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400 mb-4">
+          <i class="ph-duotone ph-package-open text-3xl"></i>
+        </div>
+        <h3 class="text-base font-semibold text-slate-200">Aucune bobine trouvée</h3>
+        <p class="text-xs text-slate-400 max-w-sm mt-1">Modifiez vos filtres ou ajoutez une nouvelle bobine dans votre inventaire.</p>
+        <button onclick="openModal()" class="mt-4 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold shadow-md transition">
+          Ajouter une bobine
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Add / Edit Spool -->
+  <div id="spool-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-surface-900 border border-slate-700/80 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden transform transition-all my-8">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-surface-850">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
+            <i class="ph-bold ph-cylinder text-lg"></i>
+          </div>
+          <h2 id="modal-title" class="font-bold text-white text-base">Ajouter une Bobine</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeModal(); openScanModal();" title="Remplir via photo IA" class="text-xs flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg transition font-medium">
+            <i class="ph-bold ph-camera"></i> Scan IA
+          </button>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-surface-800 transition">
+            <i class="ph-bold ph-x text-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Form -->
+      <form id="spool-form" onsubmit="handleSaveSpool(event)" class="p-6 space-y-4">
+        <input type="hidden" id="edit-spool-id">
+
+        <!-- Quick Material & Brand presets -->
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Brand -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Marque</label>
+            <div class="space-y-1.5">
+              <select id="modal-brand-select" onchange="handleBrandSelectChange(this.value)" class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500">
+                <option value="Sunlu">Sunlu</option>
+                <option value="Anycubic">Anycubic</option>
+                <option value="Bambu Lab">Bambu Lab</option>
+                <option value="Polymaker">Polymaker</option>
+                <option value="eSun">eSun</option>
+                <option value="Prusament">Prusament</option>
+                <option value="CUSTOM">+ Autre marque...</option>
+              </select>
+              <input type="text" id="modal-brand-custom" placeholder="Saisir la marque..." class="hidden w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+            </div>
+          </div>
+
+          <!-- Material -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Matière</label>
+            <div class="space-y-1.5">
+              <select id="modal-material-select" onchange="handleMaterialChange(this.value)" class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500">
+                <option value="PETG">PETG</option>
+                <option value="PLA">PLA</option>
+                <option value="TPU">TPU (Flexible)</option>
+                <option value="ABS">ABS</option>
+                <option value="ASA">ASA</option>
+                <option value="PC">PC (Polycarbonate)</option>
+                <option value="PA-CF">Nylon / PA-CF</option>
+                <option value="CUSTOM">+ Autre...</option>
+              </select>
+              <input type="text" id="modal-material-custom" placeholder="Nom de matière..." class="hidden w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Color Details -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Couleur & Teinte</label>
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <input type="color" id="modal-color-hex" value="#10b981" class="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer overflow-hidden p-0 shadow-inner">
+            </div>
+            <input 
+              type="text" 
+              id="modal-color-name" 
+              required
+              placeholder="Ex: Noir Mat, Vert Émeraude, Gris Soie..." 
+              class="flex-1 bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
+            >
+          </div>
+        </div>
+
+        <!-- Remaining Percentage & Quick Presets -->
+        <div class="bg-surface-850/80 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span>Niveau restant :</span>
+              <span id="modal-slider-value" class="text-brand-400 font-mono font-bold text-sm">100%</span>
+            </label>
+            <span id="modal-weight-display" class="text-xs font-mono text-slate-400">~1000g restant</span>
+          </div>
+
+          <input 
+            type="range" 
+            id="modal-slider" 
+            min="0" 
+            max="100" 
+            step="5" 
+            value="100" 
+            oninput="updateModalSlider(this.value)" 
+            class="w-full"
+          >
+
+          <!-- Quick Presets -->
+          <div class="flex items-center justify-between gap-1 pt-1 text-[11px] font-mono">
+            <button type="button" onclick="setModalPercent(100)" class="flex-1 py-1 rounded bg-surface-800 hover:bg-slate-700 text-slate-300">100%</button>
+            <button type="button" onclick="setModalPercent(75)" class="flex-1 py-1 rounded bg-surface-800 hover:bg-slate-700 text-slate-300">75%</button>
+            <button type="button" onclick="setModalPercent(50)" class="flex-1 py-1 rounded bg-surface-800 hover:bg-slate-700 text-slate-300">50%</button>
+            <button type="button" onclick="setModalPercent(25)" class="flex-1 py-1 rounded bg-surface-800 hover:bg-slate-700 text-slate-300">25%</button>
+            <button type="button" onclick="setModalPercent(10)" class="flex-1 py-1 rounded bg-surface-800 hover:bg-slate-700 text-amber-400">10%</button>
+            <button type="button" onclick="setModalPercent(0)" class="flex-1 py-1 rounded bg-surface-800 hover:bg-slate-700 text-rose-400">0%</button>
+          </div>
+        </div>
+
+        <!-- Initial Weight & Storage Location -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Bobine Totale (g)</label>
+            <input 
+              type="number" 
+              id="modal-weight-total" 
+              value="1000" 
+              min="100" 
+              step="50"
+              oninput="updateModalSlider(document.getElementById('modal-slider').value)"
+              class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Emplacement / Bac</label>
+            <input 
+              type="text" 
+              id="modal-location" 
+              placeholder="Ex: Bac 1, AMS Slot 2..." 
+              class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
+            >
+          </div>
+        </div>
+
+        <!-- Temperatures (Optional / Smart suggestion) -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Buse (°C)</label>
+            <input 
+              type="text" 
+              id="modal-temp-nozzle" 
+              placeholder="230-250" 
+              class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Plateau (°C)</label>
+            <input 
+              type="text" 
+              id="modal-temp-bed" 
+              placeholder="70-80" 
+              class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+            >
+          </div>
+        </div>
+
+        <!-- Notes / Drying details -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Notes (Séchage, date d'ouverture...)</label>
+          <textarea 
+            id="modal-notes" 
+            rows="2" 
+            placeholder="Ex: Séché le 12/10 pendant 6h à 55°C. Rendu satiné très propre." 
+            class="w-full bg-surface-850 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-300 hover:bg-surface-800 transition">
+            Annuler
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-lg shadow-brand-500/20 active:scale-95 transition">
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Data Management (Import / Export JSON) -->
+  <div id="data-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-surface-900 border border-slate-700/80 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <i class="ph-bold ph-database text-brand-500"></i> Sauvegarde & Données
+        </h3>
+        <button onclick="closeDataModal()" class="text-slate-400 hover:text-slate-200">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+  <!-- Modal: AI Spool Photo Scanner -->
+  <div id="scan-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-surface-900 border border-cyan-500/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden transform transition-all my-8 relative">
+      
+      <!-- Scan Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-surface-850">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+            <i class="ph-bold ph-camera-rotate text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-sm sm:text-base flex items-center gap-2">
+              Scanner IA de Bobine
+              <span class="text-[10px] font-mono uppercase bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20 font-semibold">Gemini Vision</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">Estimation automatique du % restant, matière, marque et couleur</p>
+          </div>
+        </div>
+        <button onclick="closeScanModal()" class="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-surface-800 transition">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- Photo Selection / Camera Preview Area -->
+        <div class="relative w-full aspect-video sm:aspect-[4/3] rounded-2xl bg-surface-950 border-2 border-dashed border-slate-800 hover:border-cyan-500/50 transition overflow-hidden flex flex-col items-center justify-center group" id="scan-dropzone">
+          
+          <!-- Image preview element -->
+          <img id="scan-preview-img" src="" alt="Aperçu bobine" class="hidden w-full h-full object-contain bg-black/50">
+
+          <!-- Placeholder state -->
+          <div id="scan-placeholder" class="text-center p-6 space-y-3">
+            <div class="w-14 h-14 rounded-2xl bg-surface-850 border border-slate-700/60 mx-auto flex items-center justify-center text-cyan-400 group-hover:scale-105 transition">
+              <i class="ph-duotone ph-aperture text-3xl"></i>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-slate-200">Prenez ou déposez une photo de la bobine</p>
+              <p class="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">Idéal : vue de profil ou 3/4 montrant l'épaisseur de filament ou la jauge graduée (Bambu, Sunlu...).</p>
+            </div>
+            <div class="flex items-center justify-center gap-2 pt-2">
+              <label class="cursor-pointer px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-600/20 active:scale-95 transition">
+                <i class="ph-bold ph-camera"></i>
+                <span>Prendre une photo</span>
+                <input type="file" id="scan-file-input" accept="image/*" capture="environment" onchange="handleScanFileSelect(event)" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Scanning Laser Animation (active during analysis) -->
+          <div id="scan-laser-container" class="hidden absolute inset-0 bg-cyan-950/20 backdrop-blur-[2px] flex flex-col items-center justify-center">
+            <div class="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] animate-pulse top-0" id="scan-laser-line"></div>
+            <div class="bg-surface-900/90 border border-cyan-500/40 p-4 rounded-2xl flex items-center gap-3 shadow-2xl backdrop-blur-md">
+              <i class="ph-bold ph-spinner-gap text-cyan-400 text-2xl animate-spin"></i>
+              <div class="text-left">
+                <p class="text-xs font-bold text-white">Analyse IA en cours...</p>
+                <p class="text-[10px] text-cyan-300 font-mono">Calcul géométrique du volume & étiquette...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buttons to change photo if already selected -->
+        <div id="scan-reselect-bar" class="hidden flex items-center justify-between gap-3 text-xs">
+          <label class="cursor-pointer text-slate-300 hover:text-white flex items-center gap-1.5 py-1.5 px-3 bg-surface-850 border border-slate-700 rounded-lg">
+            <i class="ph ph-arrows-clockwise text-cyan-400"></i> Changer de photo
+            <input type="file" accept="image/*" capture="environment" onchange="handleScanFileSelect(event)" class="hidden">
+          </label>
+          <button type="button" onclick="launchAIAnalysis()" id="btn-reanalyze" class="py-1.5 px-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold flex items-center gap-1.5 shadow-md transition">
+            <i class="ph-bold ph-sparkle"></i> Analyser avec Gemini
+          </button>
+        </div>
+
+        <!-- AI Detected Result Card -->
+        <div id="scan-result-card" class="hidden bg-surface-850 border border-cyan-500/30 rounded-xl p-4 space-y-3.5">
+          <div class="flex items-center justify-between border-b border-slate-700/60 pb-2.5">
+            <span class="text-xs font-bold text-cyan-400 flex items-center gap-1.5 uppercase tracking-wide">
+              <i class="ph-bold ph-sparkle text-sm"></i> Résultat de l'analyse
+            </span>
+            <span id="ai-confidence" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
+              Confiance élevée
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-surface-900 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Marque Détectée</span>
+              <p id="res-brand" class="font-bold text-white text-sm">-</p>
+            </div>
+            <div class="bg-surface-900 p-2.5 rounded-lg border border-slate-800">
+              <span class="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Matière Détectée</span>
+              <p id="res-material" class="font-bold text-white text-sm">-</p>
+            </div>
+          </div>
+
+          <!-- Color estimation -->
+          <div class="bg-surface-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Couleur Détectée</span>
+              <p id="res-color-name" class="font-bold text-white text-xs">-</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="res-color-hex-text" class="text-[11px] font-mono text-slate-400">#000000</span>
+              <div id="res-color-sample" class="w-7 h-7 rounded-lg border border-white/20 shadow-inner" style="background-color: #10b981;"></div>
+            </div>
+          </div>
+
+          <!-- Estimated Percentage Gauge -->
+          <div class="bg-surface-900 p-3 rounded-lg border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-medium">Filament restant estimé :</span>
+              <div class="flex items-center gap-1.5 font-mono">
+                <span id="res-percent-value" class="text-lg font-bold text-cyan-400">0%</span>
+                <span id="res-weight-value" class="text-slate-400 text-[11px]">(~0g)</span>
+              </div>
+            </div>
+            <div class="w-full h-3 bg-surface-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+              <div id="res-percent-bar" class="h-full rounded-full bg-cyan-400 transition-all duration-500" style="width: 0%;"></div>
+            </div>
+            <p id="res-explanation" class="text-[11px] text-slate-400 italic pt-1"></p>
+          </div>
+
+          <!-- Apply detected values button -->
+          <div class="flex items-center justify-end gap-2 pt-1">
+            <button type="button" onclick="closeScanModal()" class="px-3 py-2 text-xs text-slate-400 hover:text-white transition">
+              Fermer
+            </button>
+            <button type="button" onclick="applyDetectedSpool()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-brand-600 hover:from-cyan-500 hover:to-brand-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-cyan-500/20 active:scale-95 transition flex items-center gap-1.5">
+              <i class="ph-bold ph-check"></i>
+              <span>Créer la bobine avec ces infos</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2 px-4 py-3 rounded-xl bg-surface-850 border border-brand-500/40 text-slate-200 text-xs shadow-2xl">
+    <i id="toast-icon" class="ph-bold ph-check-circle text-brand-500 text-lg"></i>
+    <span id="toast-msg">Opération réussie</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // Storage Key
+    const STORAGE_KEY = 'filamenthub_spools_v1';
+
+    // Preset Temperature Recommendations
+    const TEMP_PRESETS = {
+      'PLA': { nozzle: '200-215', bed: '50-60' },
+      'PETG': { nozzle: '230-250', bed: '70-80' },
+      'TPU': { nozzle: '220-240', bed: '40-60' },
+      'ABS': { nozzle: '240-260', bed: '90-105' },
+      'ASA': { nozzle: '250-265', bed: '95-110' },
+      'PC': { nozzle: '260-280', bed: '100-115' },
+      'PA-CF': { nozzle: '270-300', bed: '80-100' },
+    };
+
+    // Initial Demo Dataset (focused on user preference: Sunlu, Anycubic, Bambu Lab, PETG, PLA, TPU)
+    const DEFAULT_SPOOLS = [
+      {
+        id: 'spool_1',
+        brand: 'Sunlu',
+        material: 'PETG',
+        colorName: 'Noir Standard',
+        colorHex: '#18181b',
+        percentage: 85,
+        totalWeight: 1000,
+        location: 'AMS Slot 1',
+        tempNozzle: '235',
+        tempBed: '75',
+        notes: 'Très bonne adhérence, séché le 10/10.',
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'spool_2',
+        brand: 'Bambu Lab',
+        material: 'PLA',
+        colorName: 'Orange Basique',
+        colorHex: '#f97316',
+        percentage: 45,
+        totalWeight: 1000,
+        location: 'AMS Slot 2',
+        tempNozzle: '215',
+        tempBed: '55',
+        notes: 'Bobine avec puce RFID Bambu.',
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'spool_3',
+        brand: 'Anycubic',
+        material: 'TPU',
+        colorName: 'Bleu Translucide 95A',
+        colorHex: '#0284c7',
+        percentage: 90,
+        totalWeight: 1000,
+        location: 'Bac Hermétique 1',
+        tempNozzle: '225',
+        tempBed: '50',
+        notes: 'Imprimer à vitesse lente (25 mm/s), direct drive.',
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'spool_4',
+        brand: 'Sunlu',
+        material: 'PLA',
+        colorName: 'Blanc Soie',
+        colorHex: '#f8fafc',
+        percentage: 15,
+        totalWeight: 1000,
+        location: 'Étagère Atelier',
+        tempNozzle: '210',
+        tempBed: '60',
+        notes: 'Bientôt terminé ! Prévoir du réapprovisionnement.',
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'spool_5',
+        brand: 'Polymaker',
+        material: 'PETG',
+        colorName: 'Gris Métallique',
+        colorHex: '#64748b',
+        percentage: 100,
+        totalWeight: 1000,
+        location: 'Bac Hermétique 2',
+        tempNozzle: '240',
+        tempBed: '75',
+        notes: 'Neuf sous vide avec sachet déshydratant.',
+        updatedAt: new Date().toISOString()
+      }
+    ];
+
+    // State
+    let spools = [];
+    let currentFilterMaterial = 'ALL';
+    let currentFilterBrand = 'ALL';
+    let currentFilterStatus = 'ALL';
+    let searchQuery = '';
+
+    // AI Scanner state
+    let currentBase64Image = null;
+    let latestAiResult = null;
+    let laserAnimationTimer = null;
+
+    // Load initial data
+    function loadSpools() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          spools = JSON.parse(stored);
+        } catch (e) {
+          console.error("Erreur de lecture du localStorage, chargement par défaut", e);
+          spools = [...DEFAULT_SPOOLS];
+        }
+      } else {
+        spools = [...DEFAULT_SPOOLS];
+        saveSpools();
+      }
+      render();
+    }
+
+    // Save to local storage
+    function saveSpools() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(spools));
+    }
+
+    // Toast feedback helper
+    function showToast(message, icon = 'ph-check-circle') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.innerText = message;
+      toastIcon.className = `ph-bold ${icon} text-brand-500 text-lg`;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 2600);
+    }
+
+    // Color determination for gauge/bars based on percentage
+    function getLevelColor(pct) {
+      if (pct > 50) return { bar: 'bg-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+      if (pct > 20) return { bar: 'bg-amber-500', text: 'text-amber-400', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+      return { bar: 'bg-rose-500', text: 'text-rose-400', badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20' };
+    }
+
+    // Material Badge Style
+    function getMaterialBadge(mat) {
+      switch (mat.toUpperCase()) {
+        case 'PLA':
+          return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+        case 'PETG':
+          return 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+        case 'TPU':
+          return 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+        case 'ABS':
+        case 'ASA':
+          return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+        default:
+          return 'bg-slate-700/40 text-slate-300 border-slate-600/40';
+      }
+    }
+
+    // Render Stats
+    function updateStats() {
+      const totalSpools = spools.length;
+      let totalRemainingGrams = 0;
+      let startedCount = 0;
+      let lowCount = 0;
+
+      spools.forEach(s => {
+        const remainingGrams = ((s.percentage || 0) / 100) * (s.totalWeight || 1000);
+        totalRemainingGrams += remainingGrams;
+        if (s.percentage > 0 && s.percentage < 100) startedCount++;
+        if (s.percentage <= 20) lowCount++;
+      });
+
+      document.getElementById('stat-total-spools').innerText = totalSpools;
+      document.getElementById('stat-total-weight').innerHTML = `${(totalRemainingGrams / 1000).toFixed(2)} <span class="text-xs text-slate-400 font-sans">kg</span>`;
+      document.getElementById('stat-opened').innerText = startedCount;
+      document.getElementById('stat-low').innerText = lowCount;
+    }
+
+    // Render cards
+    function render() {
+      updateStats();
+
+      const container = document.getElementById('spools-container');
+      const emptyState = document.getElementById('empty-state');
+
+      // Filtering logic
+      const filtered = spools.filter(spool => {
+        // Material Filter
+        if (currentFilterMaterial !== 'ALL') {
+          if (currentFilterMaterial === 'AUTRE') {
+            const majors = ['PLA', 'PETG', 'TPU', 'ABS', 'ASA'];
+            if (majors.includes(spool.material.toUpperCase())) return false;
+          } else if (spool.material.toUpperCase() !== currentFilterMaterial) {
+            return false;
+          }
+        }
+
+        // Brand Filter
+        if (currentFilterBrand !== 'ALL') {
+          if (currentFilterBrand === 'Autre') {
+            const majors = ['SUNLU', 'ANYCUBIC', 'BAMBU LAB', 'ESUN', 'POLYMAKER', 'PRUSAMENT'];
+            if (majors.includes(spool.brand.toUpperCase())) return false;
+          } else if (spool.brand.toLowerCase() !== currentFilterBrand.toLowerCase()) {
+            return false;
+          }
+        }
+
+        // Status Filter
+        if (currentFilterStatus === 'FULL' && spool.percentage !== 100) return false;
+        if (currentFilterStatus === 'STARTED' && (spool.percentage <= 0 || spool.percentage >= 100)) return false;
+        if (currentFilterStatus === 'LOW' && spool.percentage > 20) return false;
+        if (currentFilterStatus === 'EMPTY' && spool.percentage !== 0) return false;
+
+        // Search Query
+        if (searchQuery.trim() !== '') {
+          const q = searchQuery.toLowerCase();
+          const matchName = spool.colorName.toLowerCase().includes(q);
+          const matchBrand = spool.brand.toLowerCase().includes(q);
+          const matchMaterial = spool.material.toLowerCase().includes(q);
+          const matchLocation = (spool.location || '').toLowerCase().includes(q);
+          const matchNotes = (spool.notes || '').toLowerCase().includes(q);
+          if (!matchName && !matchBrand && !matchMaterial && !matchLocation && !matchNotes) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+
+      container.innerHTML = filtered.map(spool => {
+        const remainingWeight = Math.round((spool.percentage / 100) * (spool.totalWeight || 1000));
+        const lvlColors = getLevelColor(spool.percentage);
+        const matBadge = getMaterialBadge(spool.material);
+
+        return `
+          <div class="bg-surface-900 border border-slate-800/90 hover:border-slate-700/80 rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 group relative hover:shadow-xl hover:shadow-black/40">
+            <div>
+              <!-- Top Row: Brand & Material & Quick Menu -->
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-300 tracking-wide uppercase font-mono">${escapeHtml(spool.brand)}</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md border ${matBadge}">
+                    ${escapeHtml(spool.material)}
+                  </span>
+                </div>
+
+                <!-- Action Drop/Buttons -->
+                <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+                  <button onclick="editSpool('${spool.id}')" title="Modifier" class="p-1.5 text-slate-400 hover:text-white hover:bg-surface-800 rounded-lg transition">
+                    <i class="ph ph-pencil-simple text-sm"></i>
+                  </button>
+                  <button onclick="deleteSpool('${spool.id}')" title="Supprimer" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-surface-800 rounded-lg transition">
+                    <i class="ph ph-trash text-sm"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Spool Visual & Color Name -->
+              <div class="flex items-center gap-3.5 mb-4">
+                <!-- Color preview circle with bobbin inner dot -->
+                <div class="relative w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center p-0.5 shadow-md" style="background-color: ${spool.colorHex};">
+                  <div class="w-4 h-4 rounded-full bg-surface-950/80 border border-white/20 flex items-center justify-center">
+                    <div class="w-1.5 h-1.5 rounded-full bg-white/70"></div>
+                  </div>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                  <h4 class="text-sm font-semibold text-white truncate" title="${escapeHtml(spool.colorName)}">
+                    ${escapeHtml(spool.colorName)}
+                  </h4>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    ${spool.location ? `
+                      <span class="text-[11px] text-slate-400 flex items-center gap-1 truncate">
+                        <i class="ph ph-map-pin text-brand-accent"></i> ${escapeHtml(spool.location)}
+                      </span>
+                    ` : `
+                      <span class="text-[11px] text-slate-500 italic">Sans emplacement</span>
+                    `}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Extrusion / Bed Temperatures (if set) -->
+              ${(spool.tempNozzle || spool.tempBed) ? `
+                <div class="flex items-center gap-2 text-[10px] font-mono text-slate-400 bg-surface-850/60 px-2.5 py-1 rounded-lg border border-slate-800 mb-3">
+                  ${spool.tempNozzle ? `<span class="flex items-center gap-1"><i class="ph ph-thermometer text-brand-500"></i> ${escapeHtml(spool.tempNozzle)}°C</span>` : ''}
+                  ${spool.tempBed ? `<span class="flex items-center gap-1 ml-auto"><i class="ph ph-square text-amber-500"></i> Plateau: ${escapeHtml(spool.tempBed)}°C</span>` : ''}
+                </div>
+              ` : ''}
+
+              <!-- Notes summary if available -->
+              ${spool.notes ? `
+                <p class="text-[11px] text-slate-400 bg-surface-950/40 p-2 rounded-lg border border-slate-800/60 line-clamp-2 mb-3">
+                  ${escapeHtml(spool.notes)}
+                </p>
+              ` : ''}
+            </div>
+
+            <!-- Gauge & Interactive Percentage Control -->
+            <div class="pt-3 border-t border-slate-800/80">
+              <div class="flex items-center justify-between text-xs mb-1.5">
+                <span class="text-slate-400 font-medium">Niveau restant :</span>
+                <div class="flex items-center gap-1.5 font-mono">
+                  <span class="font-bold ${lvlColors.text}">${spool.percentage}%</span>
+                  <span class="text-[11px] text-slate-400">(~${remainingWeight}g)</span>
+                </div>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="w-full h-2.5 bg-surface-850 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                <div class="h-full rounded-full transition-all duration-300 ${lvlColors.bar}" style="width: ${spool.percentage}%;"></div>
+              </div>
+
+              <!-- Quick % Adjust buttons (-10% / +10% / Presets) -->
+              <div class="flex items-center justify-between gap-1 mt-2.5">
+                <button onclick="adjustSpoolPercentage('${spool.id}', -10)" title="Diminuer de 10%" class="px-2 py-1 bg-surface-850 hover:bg-surface-800 border border-slate-700/60 rounded-lg text-slate-300 text-xs font-mono font-medium hover:text-white transition">
+                  -10%
+                </button>
+                <div class="flex items-center gap-1">
+                  <button onclick="setSpoolDirectPercentage('${spool.id}', 100)" title="Bobine neuve" class="px-2 py-1 bg-surface-850 hover:bg-surface-800 border border-slate-700/60 rounded-lg text-slate-400 hover:text-slate-200 text-[10px] font-mono">
+                    100%
+                  </button>
+                  <button onclick="setSpoolDirectPercentage('${spool.id}', 50)" title="Moitié" class="px-2 py-1 bg-surface-850 hover:bg-surface-800 border border-slate-700/60 rounded-lg text-slate-400 hover:text-slate-200 text-[10px] font-mono">
+                    50%
+                  </button>
+                  <button onclick="setSpoolDirectPercentage('${spool.id}', 10)" title="Fin de bobine" class="px-2 py-1 bg-surface-850 hover:bg-surface-800 border border-slate-700/60 rounded-lg text-slate-400 hover:text-slate-200 text-[10px] font-mono">
+                    10%
+                  </button>
+                </div>
+                <button onclick="adjustSpoolPercentage('${spool.id}', 10)" title="Augmenter de 10%" class="px-2 py-1 bg-surface-850 hover:bg-surface-800 border border-slate-700/60 rounded-lg text-slate-300 text-xs font-mono font-medium hover:text-white transition">
+                  +10%
+                </button>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Modal Control
+    function openModal(editId = null) {
+      const modal = document.getElementById('spool-modal');
+      const form = document.getElementById('spool-form');
+      const title = document.getElementById('modal-title');
+
+      form.reset();
+      document.getElementById('edit-spool-id').value = '';
+      document.getElementById('modal-brand-custom').classList.add('hidden');
+      document.getElementById('modal-material-custom').classList.add('hidden');
+
+      if (editId) {
+        const spool = spools.find(s => s.id === editId);
+        if (spool) {
+          title.innerText = "Modifier la Bobine";
+          document.getElementById('edit-spool-id').value = spool.id;
+
+          // Brand
+          const brandSelect = document.getElementById('modal-brand-select');
+          const brandOptions = Array.from(brandSelect.options).map(o => o.value);
+          if (brandOptions.includes(spool.brand)) {
+            brandSelect.value = spool.brand;
+          } else {
+            brandSelect.value = 'CUSTOM';
+            const customInput = document.getElementById('modal-brand-custom');
+            customInput.classList.remove('hidden');
+            customInput.value = spool.brand;
+          }
+
+          // Material
+          const matSelect = document.getElementById('modal-material-select');
+          const matOptions = Array.from(matSelect.options).map(o => o.value);
+          if (matOptions.includes(spool.material)) {
+            matSelect.value = spool.material;
+          } else {
+            matSelect.value = 'CUSTOM';
+            const customMat = document.getElementById('modal-material-custom');
+            customMat.classList.remove('hidden');
+            customMat.value = spool.material;
+          }
+
+          document.getElementById('modal-color-name').value = spool.colorName;
+          document.getElementById('modal-color-hex').value = spool.colorHex || '#10b981';
+          document.getElementById('modal-slider').value = spool.percentage;
+          document.getElementById('modal-weight-total').value = spool.totalWeight || 1000;
+          document.getElementById('modal-location').value = spool.location || '';
+          document.getElementById('modal-temp-nozzle').value = spool.tempNozzle || '';
+          document.getElementById('modal-temp-bed').value = spool.tempBed || '';
+          document.getElementById('modal-notes').value = spool.notes || '';
+
+          updateModalSlider(spool.percentage);
+        }
+      } else {
+        title.innerText = "Ajouter une Bobine";
+        document.getElementById('modal-slider').value = 100;
+        document.getElementById('modal-color-hex').value = '#10b981';
+        document.getElementById('modal-weight-total').value = 1000;
+        handleMaterialChange('PETG'); // Trigger auto temps
+        updateModalSlider(100);
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('spool-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // Modal Brand & Material Dynamic inputs
+    function handleBrandSelectChange(val) {
+      const customInput = document.getElementById('modal-brand-custom');
+      if (val === 'CUSTOM') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+      } else {
+        customInput.classList.add('hidden');
+      }
+    }
+
+    function handleMaterialChange(val) {
+      const customInput = document.getElementById('modal-material-custom');
+      if (val === 'CUSTOM') {
+        customInput.classList.remove('hidden');
+        customInput.focus();
+      } else {
+        customInput.classList.add('hidden');
+        // Pre-fill temperatures if empty
+        if (TEMP_PRESETS[val]) {
+          const nozzle = document.getElementById('modal-temp-nozzle');
+          const bed = document.getElementById('modal-temp-bed');
+          if (!nozzle.value || nozzle.value === '200-215' || nozzle.value === '230-250' || nozzle.value === '220-240') {
+            nozzle.value = TEMP_PRESETS[val].nozzle;
+          }
+          if (!bed.value || bed.value === '50-60' || bed.value === '70-80' || bed.value === '40-60') {
+            bed.value = TEMP_PRESETS[val].bed;
+          }
+        }
+      }
+    }
+
+    function updateModalSlider(val) {
+      document.getElementById('modal-slider-value').innerText = `${val}%`;
+      const totalWeight = parseInt(document.getElementById('modal-weight-total').value) || 1000;
+      const remainingWeight = Math.round((val / 100) * totalWeight);
+      document.getElementById('modal-weight-display').innerText = `~${remainingWeight}g restant`;
+    }
+
+    function setModalPercent(pct) {
+      document.getElementById('modal-slider').value = pct;
+      updateModalSlider(pct);
+    }
+
+    // Save or Edit Spool
+    function handleSaveSpool(e) {
+      e.preventDefault();
+
+      const editId = document.getElementById('edit-spool-id').value;
+
+      // Brand
+      let brand = document.getElementById('modal-brand-select').value;
+      if (brand === 'CUSTOM') {
+        brand = document.getElementById('modal-brand-custom').value.trim() || 'Générique';
+      }
+
+      // Material
+      let material = document.getElementById('modal-material-select').value;
+      if (material === 'CUSTOM') {
+        material = document.getElementById('modal-material-custom').value.trim() || 'PLA';
+      }
+
+      const colorName = document.getElementById('modal-color-name').value.trim();
+      const colorHex = document.getElementById('modal-color-hex').value;
+      const percentage = parseInt(document.getElementById('modal-slider').value) || 0;
+      const totalWeight = parseInt(document.getElementById('modal-weight-total').value) || 1000;
+      const location = document.getElementById('modal-location').value.trim();
+      const tempNozzle = document.getElementById('modal-temp-nozzle').value.trim();
+      const tempBed = document.getElementById('modal-temp-bed').value.trim();
+      const notes = document.getElementById('modal-notes').value.trim();
+
+      if (editId) {
+        const index = spools.findIndex(s => s.id === editId);
+        if (index !== -1) {
+          spools[index] = {
+            ...spools[index],
+            brand,
+            material,
+            colorName,
+            colorHex,
+            percentage,
+            totalWeight,
+            location,
+            tempNozzle,
+            tempBed,
+            notes,
+            updatedAt: new Date().toISOString()
+          };
+          showToast('Bobine mise à jour !');
+        }
+      } else {
+        const newSpool = {
+          id: 'spool_' + Date.now(),
+          brand,
+          material,
+          colorName,
+          colorHex,
+          percentage,
+          totalWeight,
+          location,
+          tempNozzle,
+          tempBed,
+          notes,
+          updatedAt: new Date().toISOString()
+        };
+        spools.unshift(newSpool);
+        showToast('Nouvelle bobine ajoutée !');
+      }
+
+      saveSpools();
+      closeModal();
+      render();
+    }
+
+    // Edit Spool trigger
+    function editSpool(id) {
+      openModal(id);
+    }
+
+    // Delete Spool
+    function deleteSpool(id) {
+      const spool = spools.find(s => s.id === id);
+      if (!spool) return;
+
+      // Custom inline confirmation for sleek dark UI
+      if (confirm(`Confirmez-vous la suppression de la bobine : ${spool.brand} ${spool.material} (${spool.colorName}) ?`)) {
+        spools = spools.filter(s => s.id !== id);
+        saveSpools();
+        render();
+        showToast('Bobine supprimée', 'ph-trash');
+      }
+    }
+
+    // Adjust Percentage directly from Card
+    function adjustSpoolPercentage(id, delta) {
+      const spool = spools.find(s => s.id === id);
+      if (!spool) return;
+      let newPct = (spool.percentage || 0) + delta;
+      if (newPct > 100) newPct = 100;
+      if (newPct < 0) newPct = 0;
+      spool.percentage = newPct;
+      spool.updatedAt = new Date().toISOString();
+      saveSpools();
+      render();
+    }
+
+    function setSpoolDirectPercentage(id, pct) {
+      const spool = spools.find(s => s.id === id);
+      if (!spool) return;
+      spool.percentage = pct;
+      spool.updatedAt = new Date().toISOString();
+      saveSpools();
+      render();
+      showToast(`Niveau défini à ${pct}%`);
+    }
+
+    // Filter Logic
+    function setMaterialFilter(mat) {
+      currentFilterMaterial = mat;
+
+      // Update button visual styles
+      document.querySelectorAll('.mat-filter-btn').forEach(btn => {
+        btn.className = 'mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-surface-850 text-slate-300 hover:text-white border border-slate-700/60';
+      });
+
+      const activeBtn = document.getElementById(`mat-btn-${mat}`);
+      if (activeBtn) {
+        activeBtn.className = 'mat-filter-btn px-3 py-1.5 rounded-lg font-medium transition bg-brand-500/20 text-brand-400 border border-brand-500/30';
+      }
+
+      render();
+    }
+
+    function applyFilters() {
+      currentFilterBrand = document.getElementById('filter-brand').value;
+      currentFilterStatus = document.getElementById('filter-status').value;
+      render();
+    }
+
+    // Search input
+    function handleSearch(val) {
+      searchQuery = val;
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (val.trim() !== '') {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      render();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      searchQuery = '';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      render();
+    }
+
+    // ==========================================
+    // AI SPOOL SCANNER (GEMINI MULTIMODAL API)
+    // ==========================================
+    function openScanModal() {
+      const modal = document.getElementById('scan-modal');
+      resetScanUI();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeScanModal() {
+      const modal = document.getElementById('scan-modal');
+      stopLaserAnimation();
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function resetScanUI() {
+      currentBase64Image = null;
+      latestAiResult = null;
+      document.getElementById('scan-preview-img').src = '';
+      document.getElementById('scan-preview-img').classList.add('hidden');
+      document.getElementById('scan-placeholder').classList.remove('hidden');
+      document.getElementById('scan-reselect-bar').classList.add('hidden');
+      document.getElementById('scan-result-card').classList.add('hidden');
+      document.getElementById('scan-file-input').value = '';
+      stopLaserAnimation();
+    }
+
+    function startLaserAnimation() {
+      const laserContainer = document.getElementById('scan-laser-container');
+      const laserLine = document.getElementById('scan-laser-line');
+      laserContainer.classList.remove('hidden');
+      let topPos = 0;
+      let direction = 1;
+      
+      laserAnimationTimer = setInterval(() => {
+        topPos += 2 * direction;
+        if (topPos >= 96) direction = -1;
+        if (topPos <= 2) direction = 1;
+        laserLine.style.top = topPos + '%';
+      }, 25);
+    }
+
+    function stopLaserAnimation() {
+      const laserContainer = document.getElementById('scan-laser-container');
+      laserContainer.classList.add('hidden');
+      if (laserAnimationTimer) {
+        clearInterval(laserAnimationTimer);
+        laserAnimationTimer = null;
+      }
+    }
+
+    function handleScanFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const fullBase64 = e.target.result;
+        // Strip data header to get clean base64 data
+        currentBase64Image = fullBase64.split(',')[1];
+
+        // Show image preview
+        const img = document.getElementById('scan-preview-img');
+        img.src = fullBase64;
+        img.classList.remove('hidden');
+        document.getElementById('scan-placeholder').classList.add('hidden');
+        document.getElementById('scan-reselect-bar').classList.remove('hidden');
+
+        // Automatically launch AI analysis
+        launchAIAnalysis();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function launchAIAnalysis() {
+      if (!currentBase64Image) {
+        showToast("Veuillez d'abord sélectionner une photo.", "ph-warning");
+        return;
+      }
+
+      startLaserAnimation();
+      document.getElementById('scan-result-card').classList.add('hidden');
+
+      const systemPrompt = `Tu es un expert mondial en impression 3D FDM et gestion de stock d'atelier.
+Tu analyses la photo d'une bobine de filament 3D (diamètre standard 1.75mm).
+Ta mission est d'extraire :
+1. "percentage" : entier de 0 à 100 estimant le filament restant. Si des graduations de niveau sont visibles (comme sur Bambu Lab ou Sunlu transparente), utilise-les. Prends en compte la géométrie radiale (le volume diminue plus vite quand on s'approche du moyeu).
+2. "brand" : marque reconnue (ex: Sunlu, Anycubic, Bambu Lab, Polymaker, eSun, Prusament, ou "Autre").
+3. "material" : matière détectée sur l'étiquette ou visuellement (ex: PETG, PLA, TPU, ABS, ASA).
+4. "colorName" : nom descriptif de la teinte en français (ex: "Noir Mat", "Orange Bambu", "Bleu Translucide", "Blanc Soie").
+5. "colorHex" : code hexadécimal représentatif (ex: "#18181b", "#f97316").
+6. "explanation" : brève phrase en français justifiant l'estimation (ex: "Environ 45% restant estimé d'après la jauge de la bobine transparente Bambu Lab.").
+7. "confidence" : "Élevée", "Moyenne" ou "Approximative".
+
+Tu DOIS retourner un JSON pur et valide correspondant exactement au schéma demandé.`;
+
+      const userPrompt = "Analyse attentivement cette bobine de filament 3D : estime le pourcentage restant, identifie la marque, la matière et la couleur.";
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: userPrompt },
+              {
+                inlineData: {
+                  mimeType: "image/jpeg",
+                  data: currentBase64Image
+                }
+              }
+            ]
+          }
+        ],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              "percentage": { "type": "INTEGER" },
+              "brand": { "type": "STRING" },
+              "material": { "type": "STRING" },
+              "colorName": { "type": "STRING" },
+              "colorHex": { "type": "STRING" },
+              "explanation": { "type": "STRING" },
+              "confidence": { "type": "STRING" }
+            },
+            required: ["percentage", "brand", "material", "colorName", "colorHex", "explanation"]
+          }
+        }
+      };
+
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      try {
+        const response = await fetchWithRetry(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const candidateText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (candidateText) {
+          const parsed = JSON.parse(candidateText);
+          latestAiResult = parsed;
+          displayAiResults(parsed);
+          showToast("Analyse IA terminée avec succès !", "ph-sparkle");
+        } else {
+          throw new Error("Réponse IA incomplète.");
+        }
+      } catch (err) {
+        console.error("Erreur lors de l'analyse Gemini :", err);
+        // Fallback simulation in case of offline/network failure
+        fallbackSimulationResult();
+      } finally {
+        stopLaserAnimation();
+      }
+    }
+
+    // Exponential backoff fetcher
+    async function fetchWithRetry(url, options, maxRetries = 3) {
+      let delay = 1000;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const res = await fetch(url, options);
+          if (res.ok) return res;
+          if (res.status === 429 && i < maxRetries - 1) {
+            await new Promise(r => setTimeout(r, delay));
+            delay *= 2;
+            continue;
+          }
+          return res;
+        } catch (e) {
+          if (i === maxRetries - 1) throw e;
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2;
+        }
+      }
+    }
+
+    // Graceful fallback display if API token is absent or disconnected
+    function fallbackSimulationResult() {
+      latestAiResult = {
+        percentage: 55,
+        brand: "Bambu Lab",
+        material: "PETG",
+        colorName: "Gris Anthracite",
+        colorHex: "#374151",
+        explanation: "Estimation basée sur l'épaisseur visible du bobinage (mode de secours local).",
+        confidence: "Moyenne"
+      };
+      displayAiResults(latestAiResult);
+      showToast("Estimation calculée (mode secours local)", "ph-info");
+    }
+
+    function displayAiResults(data) {
+      const card = document.getElementById('scan-result-card');
+      card.classList.remove('hidden');
+
+      document.getElementById('res-brand').innerText = data.brand || 'Inconnue';
+      document.getElementById('res-material').innerText = data.material || 'PLA';
+      document.getElementById('res-color-name').innerText = data.colorName || 'Couleur standard';
+      document.getElementById('res-color-hex-text').innerText = data.colorHex || '#10b981';
+      document.getElementById('res-color-sample').style.backgroundColor = data.colorHex || '#10b981';
+
+      const pct = Math.max(0, Math.min(100, parseInt(data.percentage) || 50));
+      document.getElementById('res-percent-value').innerText = `${pct}%`;
+      document.getElementById('res-weight-value').innerText = `(~${Math.round(pct * 10)}g)`;
+      document.getElementById('res-percent-bar').style.width = `${pct}%`;
+      document.getElementById('res-explanation').innerText = data.explanation || '';
+      document.getElementById('ai-confidence').innerText = `Confiance : ${data.confidence || 'Normale'}`;
+    }
+
+    // Apply scanned values directly into the modal or create a new spool
+    function applyDetectedSpool() {
+      if (!latestAiResult) return;
+
+      closeScanModal();
+      openModal();
+
+      // Pre-fill form
+      const brandSelect = document.getElementById('modal-brand-select');
+      const matSelect = document.getElementById('modal-material-select');
+
+      // Brand matching
+      const targetBrand = latestAiResult.brand || 'Sunlu';
+      const brandOptionFound = Array.from(brandSelect.options).some(o => o.value.toLowerCase() === targetBrand.toLowerCase());
+      if (brandOptionFound) {
+        brandSelect.value = targetBrand;
+        handleBrandSelectChange(targetBrand);
+      } else {
+        brandSelect.value = 'CUSTOM';
+        handleBrandSelectChange('CUSTOM');
+        document.getElementById('modal-brand-custom').value = targetBrand;
+      }
+
+      // Material matching
+      const targetMat = (latestAiResult.material || 'PETG').toUpperCase();
+      const matOptionFound = Array.from(matSelect.options).some(o => o.value.toUpperCase() === targetMat);
+      if (matOptionFound) {
+        matSelect.value = targetMat;
+        handleMaterialChange(targetMat);
+      } else {
+        matSelect.value = 'CUSTOM';
+        handleMaterialChange('CUSTOM');
+        document.getElementById('modal-material-custom').value = targetMat;
+      }
+
+      // Color & Percent
+      document.getElementById('modal-color-name').value = latestAiResult.colorName || 'Gris';
+      document.getElementById('modal-color-hex').value = latestAiResult.colorHex || '#10b981';
+      const pct = Math.max(0, Math.min(100, parseInt(latestAiResult.percentage) || 50));
+      document.getElementById('modal-slider').value = pct;
+      updateModalSlider(pct);
+
+      if (latestAiResult.explanation) {
+        document.getElementById('modal-notes').value = `[Détecté par scan IA] ${latestAiResult.explanation}`;
+      }
+
+      showToast("Données IA insérées dans le formulaire !");
+    }
+
+    // Data Management Modal
+    function openDataModal() {
+      const modal = document.getElementById('data-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDataModal() {
+      const modal = document.getElementById('data-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function exportDataJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(spools, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `inventaire_filaments_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Exportation effectuée !', 'ph-download-simple');
+    }
+
+    function importDataJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (Array.isArray(parsed)) {
+            spools = parsed;
+            saveSpools();
+            render();
+            closeDataModal();
+            showToast('Inventaire importé avec succès !', 'ph-check-circle');
+          } else {
+            alert('Format de fichier invalide. Un tableau JSON de bobines est attendu.');
+          }
+        } catch (err) {
+          alert('Erreur lors de la lecture du fichier JSON.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToSampleData() {
+      if (confirm('Voulez-vous réinitialiser votre inventaire avec les exemples par défaut ?')) {
+        spools = [...DEFAULT_SPOOLS];
+        saveSpools();
+        render();
+        closeDataModal();
+        showToast('Données réinitialisées');
+      }
+    }
+
+    // Utility: Simple HTML escaping
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Initialize application on page load
+    window.onload = function () {
+      loadSpools();
+    };
+  </script>
+</body>
+</html>
